@@ -1,9 +1,32 @@
-CC = g++
+CXX = g++
+CPPFLAGS := -I./ -I./include/ -std=c++14 -Wall
 
-all:
+APP = main
+APP_SRC = src/$(APP).cpp
 
-unittest:
+TEST = unittest
+TEST_SRC = test/$(TEST).cpp
 
-run:
+SRC := $(wildcard src/data_structures/*.cpp)
+OBJ := $(SRC:.cpp=.o)
 
-run_unittest:
+RM = rm -f
+
+.PHONY: all run run_unittest clean
+
+all: $(APP)
+
+$(APP): $(OBJ)
+	$(CXX) $(CPPFLAGS) $(APP_SRC) $^ -o $@
+
+$(TEST): $(OBJ)
+	$(CXX) $(CPPFLAGS) $(TEST_SRC) $^ -o $@
+
+run: $(APP)
+	./$(APP)
+
+run_unittest: $(TEST)
+	./$(TEST)
+
+clean:
+		$(RM) $(APP) $(TEST) $(OBJ)
