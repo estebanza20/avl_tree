@@ -2,22 +2,25 @@
 #include <iostream>
 
 int main(void) {
-  Node* avl_tree;
-  char* file = "list.txt";
+  AVLNode* avl_tree = NULL;
+  char file[] = "misc/input/name_id_list.txt";
   int size = 0;
   int height = 0;
 
   avl_tree_create(file, &avl_tree);
 
-  avl_tree_insert(avl_tree, 12345678, "Fulanito");
+  avl_tree_insert(&avl_tree, 103426764, "Son Goku");
 
   size = avl_tree_get_size(avl_tree);
-  std::cout << "AVL tree size: " << size;
+  std::cout << "AVL tree size: " << size << std::endl;
 
-  size = avl_tree_get_max_height(avl_tree);
-  std::cout << "AVL tree max_height: " << height;
+  height = avl_tree_get_max_height(avl_tree);
+  std::cout << "AVL tree max_height: " << height << std::endl;
 
-  avl_tree_delete(avl_tree, 12345678);
+  avl_tree_remove(&avl_tree, 123456789);
+
+  size = avl_tree_get_size(avl_tree);
+  std::cout << "AVL tree size: " << size << std::endl;
 
   avl_tree_destroy(&avl_tree);
 

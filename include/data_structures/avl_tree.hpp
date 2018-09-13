@@ -2,17 +2,21 @@
 #include <string>
 #include <cstdint>
 
-struct Node {
+struct AVLNode {
   std::string name;
   uint32_t id;
 
-  struct Node* lchild;
-  struct Node* rchild;
+  AVLNode* parent = NULL;
+  AVLNode* lchild = NULL;
+  AVLNode* rchild = NULL;
+  int lheight = 0;
+  int rheight = 0;
 };
 
-void avl_tree_create(char* infile, struct Node** head);
-void avl_tree_destroy(struct Node** head);
-void avl_tree_insert(struct Node* head, uint32_t id, std::string name);
-void avl_tree_remove(struct Node* head, uint32_t id);
-int avl_tree_get_size(struct Node* head);
-int avl_tree_get_max_height(struct Node* head);
+void avl_tree_create(char* infile, AVLNode** root);
+void avl_tree_destroy(AVLNode** root);
+void avl_tree_insert(AVLNode** root, uint32_t id, std::string name);
+void avl_tree_remove(AVLNode** root, uint32_t id);
+int avl_tree_get_size(AVLNode* root);
+int avl_tree_get_balance_factor(AVLNode* root);
+int avl_tree_get_max_height(AVLNode* root);

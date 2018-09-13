@@ -1,5 +1,5 @@
 CXX = g++
-CPPFLAGS := -I./ -I./include/ -std=c++14 -Wall
+CPPFLAGS := -I./ -I./include/ -std=c++14 -Wall -g
 
 APP = main
 APP_SRC = src/$(APP).cpp
@@ -16,11 +16,11 @@ RM = rm -f
 
 all: $(APP)
 
-$(APP): $(OBJ)
-	$(CXX) $(CPPFLAGS) $(APP_SRC) $^ -o $@
+$(APP): $(OBJ) $(APP_SRC) $(SRC)
+	$(CXX) $(CPPFLAGS) $(APP_SRC) $(OBJ) -o $@
 
-$(TEST): $(OBJ)
-	$(CXX) $(CPPFLAGS) $(TEST_SRC) $^ -o $@
+$(TEST): $(OBJ) $(TEST_SRC) $(SRC)
+	$(CXX) $(CPPFLAGS) $(TEST_SRC) $(OBJ) -o $@
 
 run: $(APP)
 	./$(APP)
