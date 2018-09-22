@@ -1,32 +1,44 @@
 CXX = g++
-CPPFLAGS := -I./ -I./include/ -std=c++14 -Wall -g
+INC = -I./ -I./include/
+
+CPPFLAGS := $(INC) -std=c++14 -Wall -g
+
+SRCDIR := src
+TESTDIR := test
+BUILDDIR := build
 
 APP = main
-APP_SRC = src/$(APP).cpp
+APPSRC = $(TESTDIR)/$(APP).cpp
 
-TEST = unittest
-TEST_SRC = test/$(TEST).cpp
+UNIT = unittest
+UNITSRC = $(TESTDIR)/$(UNIT).cpp
 
-SRC := $(wildcard src/data_structures/*.cpp)
-OBJ := $(SRC:.cpp=.o)
+SRC := $(wildcard $(SRCDIR)/**/*.cpp)
+OBJ = $(addprefix $(BUILDDIR)/,$(SRC:.cpp=.o))
 
-RM = rm -f
+RM = rm -rf
 
 .PHONY: all run run_unittest clean
 
 all: $(APP)
 
-$(APP): $(OBJ) $(APP_SRC) $(SRC)
-	$(CXX) $(CPPFLAGS) $(APP_SRC) $(OBJ) -o $@
+$(APP): $(APPSRC) $(SRC) $(OBJ)
+	mkdir -p $(BUILDDIR)
+	$(CXX) $(CPPFLAGS) $(APPSRC) $(OBJ) -o $(BUILDDIR)/$@
 
-$(TEST): $(OBJ) $(TEST_SRC) $(SRC)
-	$(CXX) $(CPPFLAGS) $(TEST_SRC) $(OBJ) -o $@
+$(UNIT): $(UNITSRC) $(SRC) $(OBJ)
+	mkdir -p $(BUILDDIR)
+	$(CXX) $(CPPFLAGS) $(UNITSRC) $(OBJ) -o $(BUILDDIR)/$@
+
+$(BUILDDIR)/%.o: %.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $^ -o $@
 
 run: $(APP)
-	./$(APP)
+	./$(BUILDDIR)/$(APP)
 
-run_unittest: $(TEST)
-	./$(TEST)
+run_unittest: $(UNIT)
+	./$(BUILDDIR)/$(UNIT)
 
 clean:
-		$(RM) $(APP) $(TEST) $(OBJ)
+		$(RM) $(BUILDDIR)

@@ -11,15 +11,15 @@ int main(void) {
 
   avl_tree_insert(&avl_tree, 103426764, "Son Goku");
 
-  size = avl_tree_get_size(avl_tree);
+  avl_tree_get_size(avl_tree, &size);
   std::cout << "AVL tree size: " << size << std::endl;
 
-  height = avl_tree_get_max_height(avl_tree);
+  avl_tree_get_max_height(avl_tree, &height);
   std::cout << "AVL tree max_height: " << height << std::endl;
 
   avl_tree_remove(&avl_tree, 123456789);
 
-  size = avl_tree_get_size(avl_tree);
+  avl_tree_get_size(avl_tree, &size);
   std::cout << "AVL tree size: " << size << std::endl;
 
   avl_tree_destroy(&avl_tree);
