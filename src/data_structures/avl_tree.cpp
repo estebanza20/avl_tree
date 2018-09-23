@@ -7,10 +7,9 @@
 #include <utility>
 #include <algorithm>
 #include <stack>
+#include <queue>
 
-using db_entry = std::pair<uint32_t, std::string>;
-
-static int parse_db_list(char* infile, std::vector<db_entry>* db_list)
+static int parse_db_list(std::string infile, std::vector<db_entry>* db_list)
 {
   std::string name = "";
   std::string id_s = "";
@@ -59,12 +58,12 @@ static int parse_db_list(char* infile, std::vector<db_entry>* db_list)
   return RET_OK;
 }
 
-int avl_tree_create(char* infile, AVLNode** root)
+int avl_tree_create(std::string infile, AVLNode** root)
 {
   int ret = RET_OK;
   std::vector<db_entry> db_list;
 
-  if (root == NULL) {
+  if (*root != NULL) {
     std::cerr << "Invalid tree: Given AVL tree root pointer is not NULL" << std::endl;
     return INVALID_TREE;
   }
@@ -82,13 +81,16 @@ int avl_tree_create(char* infile, AVLNode** root)
 
 int avl_tree_destroy(AVLNode** root)
 {
-  AVLNode* lchild = (*root)->lchild;
-  AVLNode* rchild = (*root)->rchild;
+  AVLNode* lchild = NULL;
+  AVLNode* rchild = NULL;
 
-  if (root == NULL) {
+  if (*root == NULL) {
     std::cerr << "Invalid tree: Given AVL tree root pointer is NULL" << std::endl;
     return INVALID_TREE;
   }
+
+  lchild = (*root)->lchild;
+  rchild = (*root)->rchild;
 
   if (lchild != NULL) avl_tree_destroy(&lchild);
   if (rchild != NULL) avl_tree_destroy(&rchild);
@@ -99,81 +101,91 @@ int avl_tree_destroy(AVLNode** root)
   return RET_OK;
 }
 
-static AVLNode* avl_tree_rotate_rr (AVLNode* z, AVLNode* y, AVLNode* x)
+static AVLNode* avl_tree_rotate_rr (AVLNode** root, AVLNode* z, AVLNode* y)
 {
-  if (z == z->parent->rchild) {
-    z->parent->rchild = y;
+  if (z->parent) {
+    if (z == z->parent->rchild) {
+      z->parent->rchild = y;
+    } else {
+      z->parent->lchild = y;
+    }
   } else {
-    z->parent->lchild = y;
+    *root = y;
   }
 
   y->parent = z->parent;
-  z->parent = y;
 
   z->rchild = y->lchild;
   z->rheight = y->lheight;
+  if (y->lchild) y->lchild->parent = z;
 
   y->lchild = z;
   avl_tree_get_max_height(z, &(y->lheight));
+  z->parent = y;
 
   return y;
 }
 
-static AVLNode* avl_tree_rotate_ll (AVLNode* z, AVLNode* y, AVLNode* x)
+static AVLNode* avl_tree_rotate_ll (AVLNode** root, AVLNode* z, AVLNode* y)
 {
-  if (z == z->parent->rchild) {
-    z->parent->rchild = y;
+  if (z->parent) {
+    if (z == z->parent->rchild) {
+      z->parent->rchild = y;
+    } else {
+      z->parent->lchild = y;
+    }
   } else {
-    z->parent->lchild = y;
+    *root = y;
   }
 
   y->parent = z->parent;
-  z->parent = y;
 
   z->lchild = y->rchild;
   z->lheight = y->rheight;
+  if (y->rchild) y->rchild->parent = z;
 
   y->rchild = z;
   avl_tree_get_max_height(z, &(y->rheight));
+  z->parent = y;
   
   return y;
 }
 
-static AVLNode* avl_tree_rotate_rl (AVLNode* z, AVLNode* y, AVLNode* x)
+static AVLNode* avl_tree_rotate_rl (AVLNode** root, AVLNode* z, AVLNode* y, AVLNode* x)
 {
-  x->parent = z;
-  y->parent = x;
-
   y->lchild = x->rchild;
   y->lheight = x->rheight;
+  if (x->rchild) x->rchild->parent = y;
 
   x->rchild = y;
   avl_tree_get_max_height(y, &(x->rheight));
+  y->parent = x;
 
   z->rchild = x;
   avl_tree_get_max_height(x, &(z->rheight));
+  x->parent = z;
 
-  return avl_tree_rotate_rr(z, x, y);
+  return avl_tree_rotate_rr(root, z, x);
 }
 
-static AVLNode* avl_tree_rotate_lr (AVLNode* z, AVLNode* y, AVLNode* x)
+static AVLNode* avl_tree_rotate_lr (AVLNode** root, AVLNode* z, AVLNode* y, AVLNode* x)
 {
-  x->parent = z;
-  y->parent = x;
-
   y->rchild = x->lchild;
   y->rheight = x->lheight;
+  if (x->lchild) x->lchild->parent = y;
 
   x->lchild = y;
   avl_tree_get_max_height(y, &(x->lheight));
+  y->parent = x;
 
   z->lchild = x;
   avl_tree_get_max_height(x, &(z->lheight));
+  x->parent = z;
 
-  return avl_tree_rotate_lr(z, x, y);
+  return avl_tree_rotate_ll(root, z, x);
 }
 
-int avl_tree_rebalance(AVLNode* root, AVLNode* node)
+int avl_tree_rebalance(AVLNode** root, AVLNode* node)
 {
   std::stack<std::pair<AVLNode*, bool>> nodes_info;
 
@@ -191,7 +203,7 @@ int avl_tree_rebalance(AVLNode* root, AVLNode* node)
   avl_tree_get_balance_factor(node, &balance_factor);
   is_unbalanced = (std::abs(balance_factor) >= 2);
 
-  while (node != root && !is_unbalanced) {
+  while (node != *root && !is_unbalanced) {
     is_right = (node == node->parent->rchild);
     nodes_info.push(std::make_pair(node, is_right));
 
@@ -216,24 +228,24 @@ int avl_tree_rebalance(AVLNode* root, AVLNode* node)
 
     // RR
     if (y_info.second && x_info.second) {
-      node = avl_tree_rotate_rr(node, y_info.first, x_info.first);
+      node = avl_tree_rotate_rr(root, node, y_info.first);
     }
     // RL
     else if (y_info.second && !x_info.second) {
-      node = avl_tree_rotate_rl(node, y_info.first, x_info.first);
+      node = avl_tree_rotate_rl(root, node, y_info.first, x_info.first);
     }
     // LR
     else if (!y_info.second && x_info.second) {
-      node = avl_tree_rotate_rl(node, y_info.first, x_info.first);
+      node = avl_tree_rotate_lr(root, node, y_info.first, x_info.first);
     }
     // LL
     else if (!y_info.second && !x_info.second) {
-      node = avl_tree_rotate_ll(node, y_info.first, x_info.first);
+      node = avl_tree_rotate_ll(root, node, y_info.first);
     }
   }
 
   // Update heights for path up to the root
-  while (node != root && n_height != height) {
+  while (node != *root && n_height != height) {
     is_right = (node == node->parent->rchild);
     node = node->parent;
     avl_tree_get_max_height(node, &height);
@@ -267,7 +279,7 @@ int avl_tree_insert(AVLNode** root, uint32_t id, std::string name)
   }
 
   if ((id < MIN_ID) || (id > MAX_ID)) {
-    std::cerr << "Invalid key: Value out of range" << std::endl;
+    std::cerr << "Invalid key (" << id << "): Value out of range" << std::endl;
     return INVALID_KEY;
   }
 
@@ -294,7 +306,7 @@ int avl_tree_insert(AVLNode** root, uint32_t id, std::string name)
     }
   }
 
-  avl_tree_rebalance(*root, current);
+  avl_tree_rebalance(root, current);
 
   return RET_OK;
 }
@@ -303,6 +315,8 @@ int avl_tree_search(AVLNode* root, uint32_t id, AVLNode** node, bool* found)
 {
   AVLNode* next;
   bool is_right;
+
+  *found = false;
 
   if (root == NULL) {
     std::cerr << "Invalid tree: Given AVL tree root pointer is NULL" << std::endl;
@@ -448,16 +462,15 @@ int avl_tree_remove(AVLNode** root, uint32_t id)
   if (del_node == *root) *root = NULL;
   delete del_node;
 
-  if (next) avl_tree_rebalance(*root, next);
+  // if (next) avl_tree_rebalance(root, next);
 
   return RET_OK;
 }
 
 int avl_tree_get_size(AVLNode* root, int* size)
 {
-  AVLNode* lchild = root->lchild;
-  AVLNode* rchild = root->rchild;
-
+  AVLNode* lchild = NULL;
+  AVLNode* rchild = NULL;
   int lsize = 0;
   int rsize = 0;
 
@@ -465,6 +478,9 @@ int avl_tree_get_size(AVLNode* root, int* size)
     std::cerr << "Invalid tree: Given AVL tree root pointer is NULL" << std::endl;
     return INVALID_TREE;
   }
+
+  lchild = root->lchild;
+  rchild = root->rchild;
 
   if (lchild != NULL) avl_tree_get_size(lchild, &lsize);
   if (rchild != NULL) avl_tree_get_size(rchild, &rsize);
@@ -494,3 +510,87 @@ int avl_tree_get_max_height(AVLNode* root, int* max_height)
   *max_height = 1 + std::max(root->lheight, root->rheight);
   return RET_OK;
 }
+
+int avl_tree_print(AVLNode* root)
+{
+  if (root == NULL) {
+    std::cerr << "Invalid tree: Given AVL tree root pointer is NULL" << std::endl;
+    return INVALID_TREE;
+  }
+
+  int level = 0;
+  uint32_t id = 0;
+  uint32_t parent_id = 0;
+  uint32_t lchild_id = 0;
+  uint32_t rchild_id = 0;
+  std::string name = "";
+  std::string parent_name = "";
+  std::string lchild_name = "";
+  std::string rchild_name = "";
+
+  std::queue<AVLNode*> barrier;
+  AVLNode* it = NULL;
+
+  barrier.push(root);
+
+  std::cout << "======================================================" << std::endl;
+  std::cout << "-------------------  AVL Tree  -----------------------" << std::endl;
+  std::cout << "======================================================" << std::endl;
+
+  while(!barrier.empty()) {
+    level = 0;
+    id = 0;
+    parent_id = 0;
+    lchild_id = 0;
+    rchild_id = 0;
+    name = "";
+    parent_name = "";
+    lchild_name = "";
+    rchild_name = "";
+
+    it = barrier.front();
+    barrier.pop();
+
+    id = it->id;
+    name = it->name;
+
+    if (it->parent) {
+      parent_id = it->parent->id;
+      parent_name = it->parent->name;
+    }
+
+    if (it->lchild) {
+      lchild_id = it->lchild->id;
+      lchild_name = it->lchild->name;
+      barrier.push(it->lchild);
+    }
+
+    if (it->rchild) {
+      rchild_id = it->rchild->id;
+      rchild_name = it->rchild->name;
+      barrier.push(it->rchild);
+    }
+
+    level = 0;
+    while(it != root) { it = it->parent; level++; }
+
+    std::cout << "==================================================" << std::endl;
+    std::cout << "(node id): " << id << std::endl;
+    std::cout << "(node name): " << name << std::endl;
+    std::cout << "(node level): " << level << std::endl;
+    std::cout << "--------------------------------------------------" << std::endl;
+    std::cout << "(parent id): " << parent_id << std::endl;
+    std::cout << "(parent name): " << parent_name << std::endl;
+    std::cout << "--------------------------------------------------" << std::endl;
+    std::cout << "(lchild id): " << lchild_id
+              << " (rchild id): " << rchild_id << std::endl;
+    std::cout << "(lchild name): " << lchild_name
+              << " (rchild name): " << rchild_name <<std::endl;
+    std::cout << "--------------------------------------------------" << std::endl;
+  }
+  std::cout << "======================================================"
+            << std::endl << std::endl;
+
+  return RET_OK;
+}
+

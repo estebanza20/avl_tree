@@ -1,28 +1,60 @@
 #include "include/data_structures/avl_tree.hpp"
 #include <iostream>
+#include <fstream>
+#include <vector>
+#include <chrono>
 
 int main(void) {
-  AVLNode* avl_tree = NULL;
-  char file[] = "misc/input/name_id_list.txt";
+  int ret = 0;
   int size = 0;
-  int height = 0;
+  int max_height = 0;
+  AVLNode* avl_tree = NULL;
 
-  avl_tree_create(file, &avl_tree);
+  std::vector<std::string> files = {
+    "misc/input/lista_10.txt",
+    "misc/input/lista_100.txt",
+    "misc/input/lista_1000.txt",
+    "misc/input/lista_5000.txt",
+    "misc/input/lista_10000.txt"
+  };
 
-  avl_tree_insert(&avl_tree, 103426764, "Son Goku");
+  std::ofstream running_times_file("misc/data/running_times.txt");
 
-  avl_tree_get_size(avl_tree, &size);
-  std::cout << "AVL tree size: " << size << std::endl;
+  std::chrono::microseconds time;
+  std::chrono::steady_clock::time_point start, finish;
 
-  avl_tree_get_max_height(avl_tree, &height);
-  std::cout << "AVL tree max_height: " << height << std::endl;
+  for (auto& file : files) {
+    std::cout << "--------------------------------------------------" << std::endl;
+    std::cout << "Processing file: \"" << file << "\"" << std::endl;
 
-  avl_tree_remove(&avl_tree, 123456789);
+    start = std::chrono::steady_clock::now();
+    ret = avl_tree_create(file, &avl_tree);
+    finish = std::chrono::steady_clock::now();
 
-  avl_tree_get_size(avl_tree, &size);
-  std::cout << "AVL tree size: " << size << std::endl;
+    if (ret == RET_OK) {
+      time = std::chrono::duration_cast<std::chrono::microseconds>(finish - start);
+      std::cout << "AVL Tree creation time (us): " << time.count()
+                << std::endl ;
 
-  avl_tree_destroy(&avl_tree);
+      if (running_times_file.is_open()) {
+        running_times_file << file << " time (us): " << time.count() << std::endl;
+      }
+
+      avl_tree_get_size(avl_tree, &size);
+      std::cout << "AVL Tree size: " << size << std::endl;
+
+      avl_tree_get_max_height(avl_tree, &max_height);
+      std::cout << "AVL Tree max height: " << max_height
+                << std::endl << std::endl;
+    } else {
+      std::cout << "AVL Tree creation failed with return code " << ret
+                << std::endl << std::endl;
+    }
+
+    avl_tree_destroy(&avl_tree);
+  }
+
+  if (running_times_file.is_open()) running_times_file.close();
 
   return 0;
 }
