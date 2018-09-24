@@ -9,6 +9,7 @@
 #include <stack>
 #include <queue>
 
+//! Reads the input file and returns a vector of DB entries (id-name pairs)
 static int parse_db_list(std::string infile, std::vector<db_entry>* db_list)
 {
   std::string name = "";
@@ -71,9 +72,10 @@ int avl_tree_create(std::string infile, AVLNode** root)
   ret = parse_db_list(infile, &db_list);
   if (ret) return ret;
 
+  // Insert each parsed DB entry into the tree
   for (auto& db_entry : db_list) {
     ret = avl_tree_insert(root, db_entry.first, db_entry.second);
-    if (ret) return ret;
+    if (ret && (ret != INVALID_KEY) && (ret != KEY_EXISTS)) return ret;
   }
 
   return ret;
@@ -101,6 +103,7 @@ int avl_tree_destroy(AVLNode** root)
   return RET_OK;
 }
 
+// Perform AVL Tree RR rotation
 static AVLNode* avl_tree_rotate_rr (AVLNode** root, AVLNode* z, AVLNode* y)
 {
   if (z->parent) {
@@ -110,6 +113,7 @@ static AVLNode* avl_tree_rotate_rr (AVLNode** root, AVLNode* z, AVLNode* y)
       z->parent->lchild = y;
     }
   } else {
+    // y is the new root
     *root = y;
   }
 
@@ -126,6 +130,7 @@ static AVLNode* avl_tree_rotate_rr (AVLNode** root, AVLNode* z, AVLNode* y)
   return y;
 }
 
+// Perform AVL Tree LL rotation
 static AVLNode* avl_tree_rotate_ll (AVLNode** root, AVLNode* z, AVLNode* y)
 {
   if (z->parent) {
@@ -135,6 +140,7 @@ static AVLNode* avl_tree_rotate_ll (AVLNode** root, AVLNode* z, AVLNode* y)
       z->parent->lchild = y;
     }
   } else {
+    // y is the new root
     *root = y;
   }
 
@@ -151,6 +157,7 @@ static AVLNode* avl_tree_rotate_ll (AVLNode** root, AVLNode* z, AVLNode* y)
   return y;
 }
 
+// Perform AVL Tree RL rotation
 static AVLNode* avl_tree_rotate_rl (AVLNode** root, AVLNode* z, AVLNode* y, AVLNode* x)
 {
   y->lchild = x->rchild;
@@ -168,6 +175,7 @@ static AVLNode* avl_tree_rotate_rl (AVLNode** root, AVLNode* z, AVLNode* y, AVLN
   return avl_tree_rotate_rr(root, z, x);
 }
 
+// Perform AVL Tree LR rotation
 static AVLNode* avl_tree_rotate_lr (AVLNode** root, AVLNode* z, AVLNode* y, AVLNode* x)
 {
   y->rchild = x->lchild;
@@ -185,7 +193,11 @@ static AVLNode* avl_tree_rotate_lr (AVLNode** root, AVLNode* z, AVLNode* y, AVLN
   return avl_tree_rotate_ll(root, z, x);
 }
 
-int avl_tree_rebalance(AVLNode** root, AVLNode* node)
+//! 
+/* Rebalance the AVL Tree. Updates heights and calculates balance factors,
+ * if an unbalanced node is detected apply rotation.
+ */
+static int avl_tree_rebalance(AVLNode** root, AVLNode* node)
 {
   std::stack<std::pair<AVLNode*, bool>> nodes_info;
 
@@ -269,6 +281,7 @@ int avl_tree_insert(AVLNode** root, uint32_t id, std::string name)
   bool found = false;
 
   if (*root) {
+    // Search of node insertion position
     avl_tree_search(*root, id, &current, &found);
     if (found) {
       std::cerr << "Invalid insertion: Key already exists" << std::endl;
@@ -283,6 +296,7 @@ int avl_tree_insert(AVLNode** root, uint32_t id, std::string name)
     return INVALID_KEY;
   }
 
+  // Insert new node in proper position
   if (!current) {
     current = new AVLNode;
     current->parent = NULL;
@@ -306,6 +320,7 @@ int avl_tree_insert(AVLNode** root, uint32_t id, std::string name)
     }
   }
 
+  // Rebalance the tree after insertion
   avl_tree_rebalance(root, current);
 
   return RET_OK;
@@ -325,6 +340,7 @@ int avl_tree_search(AVLNode* root, uint32_t id, AVLNode** node, bool* found)
 
   *node = next = root;
 
+  // BST traversal, compare ID to detect if node is found
   while (next != NULL && !*found) {
     *node = next;
     is_right = (id > (*node)->id);
@@ -373,10 +389,11 @@ int avl_tree_get_min_node(AVLNode* root, AVLNode** node)
   return RET_OK;
 }
 
+// FIXME: Implement rebalance step
+//! Removes a node from the AVL Tree
 int avl_tree_remove(AVLNode** root, uint32_t id)
 {
   AVLNode* current = NULL;
-  AVLNode* next = NULL;
   AVLNode* replace = NULL;
   AVLNode* del_node = NULL;
   bool is_right = false;
@@ -403,7 +420,6 @@ int avl_tree_remove(AVLNode** root, uint32_t id)
         current->parent->lchild = NULL;
         current->parent->lheight = 0;
       }
-      next = current->parent;
     }
     del_node = current;
 
@@ -417,7 +433,6 @@ int avl_tree_remove(AVLNode** root, uint32_t id)
         current->parent->lchild = current->rchild;
         current->parent->lheight = current->rheight;
       }
-      next = current->parent;
     }
     current->rchild->parent = current->parent;
     del_node = current;
@@ -432,7 +447,6 @@ int avl_tree_remove(AVLNode** root, uint32_t id)
         current->parent->lchild = current->lchild;
         current->parent->lheight = current->lheight;
       }
-      next = current->parent;
     }
     current->lchild->parent = current->parent;
     del_node = current;
@@ -455,14 +469,11 @@ int avl_tree_remove(AVLNode** root, uint32_t id)
     current->id = replace->id;
     current->name = replace->name;
 
-    next = replace->parent;
     del_node = replace;
   }
 
   if (del_node == *root) *root = NULL;
   delete del_node;
-
-  // if (next) avl_tree_rebalance(root, next);
 
   return RET_OK;
 }
@@ -537,6 +548,7 @@ int avl_tree_print(AVLNode* root)
   std::cout << "-------------------  AVL Tree  -----------------------" << std::endl;
   std::cout << "======================================================" << std::endl;
 
+  // BFS traversal of the tree
   while(!barrier.empty()) {
     level = 0;
     id = 0;
@@ -551,6 +563,7 @@ int avl_tree_print(AVLNode* root)
     it = barrier.front();
     barrier.pop();
 
+    // On each node prints parent, child and current info
     id = it->id;
     name = it->name;
 

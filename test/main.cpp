@@ -10,6 +10,7 @@ int main(void) {
   int max_height = 0;
   AVLNode* avl_tree = NULL;
 
+  // Vector of input files
   std::vector<std::string> files = {
     "misc/input/lista_10.txt",
     "misc/input/lista_100.txt",
@@ -28,22 +29,23 @@ int main(void) {
     std::cout << "Processing file: \"" << file << "\"" << std::endl;
 
     start = std::chrono::steady_clock::now();
+    // Create the AVL tree from input file
     ret = avl_tree_create(file, &avl_tree);
     finish = std::chrono::steady_clock::now();
 
     if (ret == RET_OK) {
       time = std::chrono::duration_cast<std::chrono::microseconds>(finish - start);
-      std::cout << "AVL Tree creation time (us): " << time.count()
-                << std::endl ;
+      avl_tree_get_size(avl_tree, &size);
+      avl_tree_get_max_height(avl_tree, &max_height);
 
+      // Write AVL Tree creation running time (us) information in output file
       if (running_times_file.is_open()) {
-        running_times_file << file << " time (us): " << time.count() << std::endl;
+        running_times_file << file << " " << size << " " << time.count() << std::endl;
       }
 
-      avl_tree_get_size(avl_tree, &size);
+      // Print AVL Tree information to standard output
+      std::cout << "AVL Tree creation time (us): " << time.count() << std::endl;
       std::cout << "AVL Tree size: " << size << std::endl;
-
-      avl_tree_get_max_height(avl_tree, &max_height);
       std::cout << "AVL Tree max height: " << max_height
                 << std::endl << std::endl;
     } else {

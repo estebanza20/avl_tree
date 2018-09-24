@@ -2,8 +2,16 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <fstream>
+#include <chrono>
+#include <sys/time.h>
+
 #include "include/data_structures/avl_tree.hpp"
 
+/**
+ * Utilitary function to recursively calculate tree max height
+ * (not relying on AVL Tree lheight and rheight metadata).
+ **/
 int calc_tree_max_height(AVLNode* root) {
   int lheight = 0;
   int rheight = 0;
@@ -14,6 +22,10 @@ int calc_tree_max_height(AVLNode* root) {
   return 1 + std::max(lheight, rheight);
 }
 
+/**
+ * Validates AVL Tree properties (BST and balance factor)
+ * on each node in the tree.
+ **/
 static void validate_avl_tree(AVLNode* root) {
   int lheight = 0;
   int rheight = 0;
@@ -34,11 +46,12 @@ static void validate_avl_tree(AVLNode* root) {
 
   ASSERT_LT(std::abs(rheight-lheight), 2);
 }
- 
+
+// Test AVL tree create from file and destroy operations
 TEST(AVLTreeTest, CreateDestroy) {
   int ret = 0;
   AVLNode* avl_tree = NULL;
-  char file[] = "misc/input/name_id_list.txt";
+  char file[] = "misc/input/lista_10.txt";
 
   ret = avl_tree_create(file, &avl_tree);
   ASSERT_EQ(ret, RET_OK);
@@ -55,6 +68,7 @@ TEST(AVLTreeTest, CreateDestroy) {
   ASSERT_EQ(ret, INVALID_TREE);
 }
 
+// Test valid and invalid AVL Tree predefined insertions
 TEST(AVLTreeTest, InsertNodesBasic) {
   int ret = 0;
   int size = 0;
@@ -100,7 +114,8 @@ TEST(AVLTreeTest, InsertNodesBasic) {
   ASSERT_EQ(ret, INVALID_KEY);
 }
 
-TEST(AVLTreeTest, InsertNodesStress) {
+// Test random node insertions, validating the AVL Tree after each insertion
+TEST(AVLTreeTest, InsertNodesValidate) {
   int ret = 0;
   int size = 0;
   int exp_size = 0;
@@ -108,7 +123,7 @@ TEST(AVLTreeTest, InsertNodesStress) {
 
   AVLNode* avl_tree = NULL;
   AVLNode* avl_node = NULL;
-  const int num_inserts = 1000000;
+  const int num_inserts = 1000;
 
   for (int i = 0; i < num_inserts; i++) {
     uint32_t id = MIN_ID + rand() % (MAX_ID-MIN_ID);
@@ -122,19 +137,62 @@ TEST(AVLTreeTest, InsertNodesStress) {
 
     if (!found) {
       ret = avl_tree_insert(&avl_tree, id, "");
-      ASSERT_EQ(ret, RET_OK);
       exp_size++;
     }
-  }
 
-  validate_avl_tree(avl_tree);
+    validate_avl_tree(avl_tree);
+  }
 
   ret = avl_tree_get_size(avl_tree, &size);
   ASSERT_EQ(ret, RET_OK);
   ASSERT_EQ(size, exp_size);
 }
 
+/**
+* Test the creation of multiple AVL Trees, by inserting an incrementally
+* large number of nodes along multiple iterations, validating the tree after
+* each set of insertions (iteration). Also prints the execution time of
+* the tree creation.
+**/
+
+TEST(AVLTreeTest, InsertNodesStress) {
+  int size = 0;
+  int max_height = 0;
+  AVLNode* avl_tree = NULL;
+  const int num_iterations = 10;
+  const int step_size = 10000;
+  uint32_t id = 0;
+
+  for (int i = 1; i < num_iterations; i++) {
+    std::chrono::microseconds time;
+    std::chrono::high_resolution_clock::time_point start, finish;
+
+    start = std::chrono::high_resolution_clock::now();
+
+    for (int j = 0; j < i * step_size; j++) {
+      id = MIN_ID + rand() % (MAX_ID-MIN_ID);
+      avl_tree_insert(&avl_tree, id, "");
+    }
+
+    finish = std::chrono::high_resolution_clock::now();
+
+    time = std::chrono::duration_cast<std::chrono::microseconds>(finish - start);
+
+    avl_tree_get_size(avl_tree, &size);
+    avl_tree_get_max_height(avl_tree, &max_height);
+
+    std::cout << "size: " << size
+              << " height: " << max_height
+              << " time (us): " << time.count()
+              << std::endl;
+
+    validate_avl_tree(avl_tree);
+    avl_tree_destroy(&avl_tree);
+  }
+}
+
 int main(int argc, char **argv) {
+  srand(time(0));
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
